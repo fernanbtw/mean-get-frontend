@@ -1,0 +1,224 @@
+<main class="app-shell">
+  <section class="page-heading">
+    <div>
+      <p class="eyebrow">MEAN CRUD</p>
+      <h1>Ventas y descuentos</h1>
+    </div>
+    <button class="ghost-button" type="button" (click)="loadSales()" [disabled]="loading()">
+      Actualizar
+    </button>
+  </section>
+
+  <section class="summary-grid" aria-label="Resumen de ventas">
+    <article class="metric-card">
+      <span>Total bruto</span>
+      <strong>{{ formatMoney(summary()?.totalBruto) }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Descuentos</span>
+      <strong>{{ formatMoney(summary()?.totalDescuentos) }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Total neto</span>
+      <strong>{{ formatMoney(summary()?.totalNeto) }}</strong>
+    </article>
+    <article class="metric-card accent">
+      <span>Registros</span>
+      <strong>{{ summary()?.cantidad ?? 0 }}</strong>
+    </article>
+    <article class="metric-card highlight">
+      <span>Mayor descuento</span>
+      <strong>{{ formatMoney(summary()?.mayorDescuento?.descuento) }}</strong>
+      @if (summary()?.mayorDescuento) {
+        <small>{{ summary()?.mayorDescuento?.porcentajeDescuento }}% aplicado</small>
+      }
+    </article>
+  </section>
+
+  <section class="analysis-grid" aria-label="Graficas de ventas">
+    <article class="panel chart-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Antes vs despues</h2>
+          <p>Ventas brutas comparadas con ventas netas</p>
+        </div>
+      </div>
+
+      <div class="bar-chart" role="img" aria-label="Grafica de barras antes y despues del descuento">
+        <div class="bar-column">
+          <div class="bar-track">
+            <div class="bar gross" [style.height.%]="grossBarHeight()"></div>
+          </div>
+          <strong>{{ formatMoney(summary()?.totalBruto) }}</strong>
+          <span>Sin descuento</span>
+        </div>
+        <div class="bar-column">
+          <div class="bar-track">
+            <div class="bar net" [style.height.%]="netBarHeight()"></div>
+          </div>
+          <strong>{{ formatMoney(summary()?.totalNeto) }}</strong>
+          <span>Con descuento</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel chart-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Con y sin descuento</h2>
+          <p>Distribucion circular del total comparado</p>
+        </div>
+      </div>
+
+      <div class="donut-layout">
+        <div
+          class="donut-chart"
+          [style.background]="circularChart().background"
+          role="img"
+          aria-label="Grafica circular con y sin descuento"
+        >
+          <div>
+            <strong>{{ discountImpactPercent() }}%</strong>
+            <span>impacto</span>
+          </div>
+        </div>
+
+        <div class="chart-legend">
+          <div>
+            <i class="legend-dot gross"></i>
+            <span>Sin descuento</span>
+            <strong>{{ circularChart().grossPercent }}%</strong>
+          </div>
+          <div>
+            <i class="legend-dot net"></i>
+            <span>Con descuento</span>
+            <strong>{{ circularChart().netPercent }}%</strong>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="work-grid">
+    <form class="panel sale-form" [formGroup]="saleForm" (ngSubmit)="submitSale()">
+      <div class="panel-heading">
+        <h2>{{ isEditing() ? 'Editar venta' : 'Nueva venta' }}</h2>
+        @if (isEditing()) {
+          <button class="text-button" type="button" (click)="resetForm()">Cancelar</button>
+        }
+      </div>
+
+      <label>
+        <span>Valor de venta</span>
+        <input
+          type="number"
+          min="0"
+          step="1000"
+          formControlName="valorVenta"
+          placeholder="0"
+        />
+      </label>
+      @if (saleForm.controls.valorVenta.invalid && saleForm.controls.valorVenta.touched) {
+        <p class="field-error">Ingresa un valor mayor o igual a 0.</p>
+      }
+
+      <label>
+        <span>Porcentaje de descuento</span>
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          formControlName="porcentajeDescuento"
+          placeholder="0"
+        />
+      </label>
+      @if (saleForm.controls.porcentajeDescuento.invalid && saleForm.controls.porcentajeDescuento.touched) {
+        <p class="field-error">El descuento debe estar entre 0 y 100.</p>
+      }
+
+      <div class="form-preview" aria-label="Vista previa">
+        <div>
+          <span>Descuento</span>
+          <strong>
+            {{ formatMoney((saleForm.value.valorVenta ?? 0) * ((saleForm.value.porcentajeDescuento ?? 0) / 100)) }}
+          </strong>
+        </div>
+        <div>
+          <span>Total final</span>
+          <strong>
+            {{ formatMoney((saleForm.value.valorVenta ?? 0) - ((saleForm.value.valorVenta ?? 0) * ((saleForm.value.porcentajeDescuento ?? 0) / 100))) }}
+          </strong>
+        </div>
+      </div>
+
+      @if (error()) {
+        <p class="alert error">{{ error() }}</p>
+      }
+      @if (success()) {
+        <p class="alert success">{{ success() }}</p>
+      }
+
+      <button class="primary-button" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Guardando...' : (isEditing() ? 'Guardar cambios' : 'Registrar venta') }}
+      </button>
+    </form>
+
+    <section class="panel sales-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Historial</h2>
+          <p>{{ loading() ? 'Cargando datos...' : (sales().length + ' registros') }}</p>
+        </div>
+        <button class="danger-button" type="button" (click)="deleteAllSales()" [disabled]="!sales().length">
+          Limpiar
+        </button>
+      </div>
+
+      @if (!loading() && sales().length === 0) {
+        <div class="empty-state">
+          <strong>Sin ventas registradas</strong>
+          <span>Agrega la primera venta desde el formulario.</span>
+        </div>
+      }
+
+      @if (sales().length > 0) {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Valor</th>
+                <th>%</th>
+                <th>Descuento</th>
+                <th>Total</th>
+                <th>Clase</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (sale of sales(); track trackById($index, sale)) {
+                <tr>
+                  <td>{{ formatMoney(sale.valorVenta) }}</td>
+                  <td>{{ sale.porcentajeDescuento }}%</td>
+                  <td>{{ formatMoney(sale.descuento) }}</td>
+                  <td class="strong-cell">{{ formatMoney(sale.totalFinal) }}</td>
+                  <td>
+                    <span class="badge" [class.high]="sale.clasificacion === 'Alto'" [class.medium]="sale.clasificacion === 'Medio'">
+                      {{ sale.clasificacion }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="row-actions">
+                      <button type="button" class="small-button" (click)="editSale(sale)">Editar</button>
+                      <button type="button" class="small-button danger" (click)="deleteSale(sale)">Eliminar</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  </section>
+</main>
