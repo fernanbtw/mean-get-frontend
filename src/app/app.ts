@@ -77,8 +77,13 @@ export class App implements OnInit {
         this.summary.set(response.resumen);
         this.loading.set(false);
       },
-      error: () => {
-        this.error.set('No se pudo conectar con la API. Revisa que el backend este corriendo en el puerto 4000.');
+      error: (response) => {
+        const detail = response?.error?.message || response?.message || '';
+        this.error.set(
+          detail
+            ? `No se pudo conectar con la API. ${detail}`
+            : 'No se pudo conectar con la API. Verifica que la URL publica del backend responda correctamente.'
+        );
         this.loading.set(false);
       },
     });

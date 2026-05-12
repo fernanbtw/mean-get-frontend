@@ -8,9 +8,7 @@ import { SalePayload, SaleResponse, SalesListResponse } from './sale.model';
   providedIn: 'root',
 })
 export class SalesService {
-  // En desarrollo Angular usa proxy hacia el backend local.
-  // En produccion la app y la API viven bajo el mismo dominio.
-  private readonly apiUrl = '/api/sales';
+  private readonly apiUrl = 'https://mean-get-backend-production.up.railway.app/api/sales';
 
   constructor(private readonly http: HttpClient) {}
 
